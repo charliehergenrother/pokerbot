@@ -38,6 +38,7 @@ def process_args():
             automated = True
         elif sys.argv[argcounter] == '-v':
             verbose = True
+            argcounter -= 1
         else:
             print("unrecognized argument", sys.argv[argcounter])
             sys.exit()
@@ -54,23 +55,28 @@ def run_one_betting_round(game):
             continue
         game.status()
         if player.CPU:
-            decision = player.bot.make_decision()
+            if player.chips:
+                decision = player.bot.make_decision()
+                print(decision)
+            else:
+                decision = "check"
             time.sleep(1)
         else:
             decision = input("What would you like to do? ").lower()
         if decision == "check":
-            if game.bet_to_call > 0 and player.current_bet != game.bet_to_call:
+            if game.bet_to_call > 0 and player.current_bet != game.bet_to_call and player.chips:
                 print("You can't check, silly, there's a bet to call.")
                 continue
             player.has_acted = True
         elif decision == "fold":
             player.hand = list()
-            game.pot += player.current_bet 
+            game.pot[player] += player.current_bet 
             player.current_bet = 0
             player.has_acted = True
         elif decision == "call":
-            player.chips -= game.bet_to_call - player.current_bet
-            player.current_bet = game.bet_to_call
+            amount_called = min([game.bet_to_call, player.chips + player.current_bet])
+            player.chips -= amount_called - player.current_bet
+            player.current_bet = amount_called
             #TODO: going all in & split pots
             player.has_acted = True
         elif (decision.split(" ")[0] in ["raise", "bet"]) and int(decision.split(" ")[1]) > 0:
@@ -101,25 +107,55 @@ def run_one_hand(game):
             break
         if i < 3:
             game.do_community()
-        else:
-            winner = game.do_showdown()
-    if not winner:
+    while game.pot_total:
+        if game.verbose:
+            for player in game.pot:
+                print(player.ID, game.pot[player], end=', ')
+            print()
         winner = game.hand_winner
-    if type(winner) == list:
-        for player in winner:
-            #TODO: extra chips?
-            print("Winner:", player.ID, game.pot // len(winner), "chips")
-            player.chips += game.pot // len(winner)
-    else:
-        winner.chips += game.pot
-        print("Winner:", winner.ID, game.pot, "chips")
-    game.pot = 0
+        if not winner:
+            winner = game.do_showdown()
+        if game.verbose:
+            if type(winner) != list:
+                print("Big ol winner:", winner.ID)
+        if type(winner) == list:
+            for player in winner:
+                player_amount_won = 0
+                #TODO: extra chips?
+                #TODO: how do I eliminate players from the chip count?
+                for opponent in game.players:
+                    check_mins = [player.max_win_per_player[opponent]]
+                    if game.pot[opponent] >= len(winner):
+                        check_mins.append(game.pot[opponent] // len(winner))
+                    elif game.pot[opponent] > 0:
+                        check_mins.append(1)
+                    else:
+                        check_mins.append(0)
+                    opponent_amount_won = min([game.pot[opponent] // len(winner), player.max_win_per_player[opponent]])
+                    player.chips += opponent_amount_won
+                    player_amount_won += opponent_amount_won
+                    game.pot[opponent] -= opponent_amount_won
+                    player.max_win_per_player[opponent] -= opponent_amount_won
+                print("Winner:", player.ID, player_amount_won, "chips")
+        else:
+            player_amount_won = 0
+            for opponent in game.players:
+                player_amount_won += game.pot[opponent]
+                game.pot[opponent] = 0
+            print("Winner:", winner.ID, player_amount_won, "chips")
+            winner.chips += player_amount_won
+    time.sleep(10)
+
+def reset_for_new_hand():
     game.phase = 0
     game.community = list()
     for player in game.players:
         player.hand = list()
         player.current_bet = 0
         player.has_acted = 0
+        for opponent in game.players:
+            player.max_win_per_player[opponent] = player.chips
+        game.pot[player] = 0
     game.dealer = (game.dealer + 1) % len(game.players)
     game.hands_until_double -= 1
     if game.hands_until_double == 0:
@@ -132,7 +168,7 @@ if __name__ == "__main__":
     
     while not game.winner():
         run_one_hand(game)
-
+        reset_for_new_hand()
 
 
 

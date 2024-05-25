@@ -15,6 +15,8 @@ class Player:
         self.hand = list()
         self.current_bet = 0
         self.has_acted = False
+        self.max_win_per_player = dict()
+        self.game = game
 
     def print_hand(self):
         for card in self.hand:
@@ -24,4 +26,21 @@ class Player:
     def get_active(self):
         return len(self.hand)
 
+    def get_max_bet(self):
+        max_bet = 0
+        for player in self.game.players:
+            if player.ID == self.ID:
+                continue
+            if not player.active:
+                continue
+            if max_bet < player.chips + player.current_bet:
+                max_bet = player.chips + player.current_bet
+        return min([max_bet, self.chips + self.current_bet])
+
     active = property(get_active)
+    current_max_bet = property(get_max_bet)
+
+
+
+
+

@@ -30,6 +30,11 @@ class Game:
                 self.players.append(Player(PLAYERS[i], chips, True, self))
             else:
                 self.players.append(Player("Charlie", chips, False, self))
+        for player in self.players:
+            player.max_win_per_player = dict()
+            for opponent in self.players:
+                player.max_win_per_player[opponent] = chips
+
         random.shuffle(self.players)
         
         self.deck = Deck()
@@ -42,7 +47,9 @@ class Game:
 
         self.phase = 0
 
-        self.pot = 0
+        self.pot = dict()
+        for player in self.players:
+            self.pot[player] = 0
         
         self.community = list()
         self.verbose = verbose
@@ -63,7 +70,7 @@ class Game:
             for player in self.players:
                 if player.chips > 0:
                     player.hand.append(self.deck.cards.pop(0))
-            
+
         self.phase += 1
 
     def find_blind(self, position):
@@ -95,7 +102,7 @@ class Game:
 
     def complete_phase(self):
         for player in self.players:
-            self.pot += player.current_bet
+            self.pot[player] += player.current_bet
             player.current_bet = 0
             player.has_acted = False
         self.phase += 1
@@ -251,10 +258,34 @@ class Game:
         hand_ranks = list()
         for player in self.players:
             if player.active:
+                found_winnable_chips = False
+                if self.verbose:
+                    print("POT: ", end='')
+                    for opponent in self.players:
+                        print(opponent.ID + ":", self.pot[opponent], end=', ')
+                    print()
+                    print("MAX WIN PER PLAYER FOR", player.ID + ':', end='')
+                    for opponent in self.players:
+                        print(opponent.ID + ":", player.max_win_per_player[opponent], end=', ')
+                    print()
+                for opponent in self.players:
+                    if self.pot[opponent] > 0 and player.max_win_per_player[opponent] > 0:
+                        found_winnable_chips = True
+                        break
+                if not found_winnable_chips:
+                    if self.verbose:
+                        print(player.ID, "has no winnable chips")
+                    player.hand = list()
+                    player.rank = "fold"
+                    player.tiebreakers = []
+                    continue
                 if self.verbose:
                     print(player.ID)
                 player.rank, player.tiebreakers = self.get_hand_rank(player)
                 hand_ranks.append(player.rank)
+            else:
+                player.rank = "fold"
+                player.tiebreakers = []
         if self.verbose:
             print(hand_ranks)
         for hand_rank in ALL_HAND_RANKS:
@@ -293,7 +324,7 @@ class Game:
         for card in self.community:
             print(card.rank + card.suit, end=' ')
         print()
-        print("Pot:", self.pot)
+        print("Pot:", sum([self.pot[player] for player in self.players]))
         print()
         print()
         for index, player in enumerate(self.players):
@@ -335,7 +366,7 @@ class Game:
     def get_all_bets_even(self):
         max_bet = self.bet_to_call
         for player in self.players:
-            if player.active and player.current_bet != max_bet:
+            if player.active and player.current_bet != max_bet and player.chips != 0:
                 return False
             #TODO: fix split pots
         return True
@@ -349,11 +380,14 @@ class Game:
                 has_cards = player
         return has_cards
 
+    def get_pot_total(self):
+        return sum([self.pot[player] for player in self.players])
+
     bet_to_call = property(get_bet_to_call)
     all_players_acted = property(get_all_players_acted)
     all_bets_even = property(get_all_bets_even)
     hand_winner = property(get_hand_winner)
-
+    pot_total = property(get_pot_total)
 
 
 
