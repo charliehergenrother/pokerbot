@@ -7,7 +7,7 @@ import random
 ALL_RANKS = ["A", "K", "Q", "J", "10", "9", "8", "7", "6", "5", "4", "3", "2"]
 ALL_SUITS = ["C", "S", "H", "D"]
 ALL_HAND_RANKS = ["royal flush", "straight flush", "four of a kind", "full house", \
-        "flush", "straight", "three of a kind", "two pair", "pair", "high card"]
+        "flush", "straight", "three of a kind", "two pair", "one pair", "high card"]
 PHASES = ["predeal", "preflop", "flop", "turn", "river"]
 
 PLAYERS = {
@@ -264,7 +264,7 @@ class Game:
                     for opponent in self.players:
                         print(opponent.ID + ":", self.pot[opponent], end=', ')
                     print()
-                    print("MAX WIN PER PLAYER FOR", player.ID + ':', end='')
+                    print("MAX WIN PER PLAYER FOR", player.ID + ': ', end='')
                     for opponent in self.players:
                         print(opponent.ID + ":", player.max_win_per_player[opponent], end=', ')
                     print()

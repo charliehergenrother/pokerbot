@@ -9,7 +9,7 @@ def process_args():
     players = 2
     chips = 1000
     big_blind = 10
-    double_hands = -1
+    double_hands = 20
     automated = False
     verbose = False
     while argcounter < len(sys.argv):
@@ -43,8 +43,6 @@ def process_args():
             print("unrecognized argument", sys.argv[argcounter])
             sys.exit()
         argcounter += 2
-    if double_hands == -1:
-        double_hands = 10*players
     return players, chips, big_blind, double_hands, automated, verbose
 
 def run_one_betting_round(game):
@@ -131,7 +129,7 @@ def run_one_hand(game):
                         check_mins.append(1)
                     else:
                         check_mins.append(0)
-                    opponent_amount_won = min([game.pot[opponent] // len(winner), player.max_win_per_player[opponent]])
+                    opponent_amount_won = min(check_mins)
                     player.chips += opponent_amount_won
                     player_amount_won += opponent_amount_won
                     game.pot[opponent] -= opponent_amount_won
@@ -160,7 +158,12 @@ def reset_for_new_hand():
     game.hands_until_double -= 1
     if game.hands_until_double == 0:
         game.big_blind *= 2
-        game.hands_until_double = len(game.players)*10
+        total_chips = sum([player.chips for player in game.players])
+        if game.big_blind > total_chips * 0.05:
+            game.big_blind = round(total_chips * 0.05)
+            if game.big_blind % 2:
+                game.big_blind += 1
+        game.hands_until_double = 20
 
 if __name__ == "__main__":
     players, chips, big_blind, double_hands, automated, verbose = process_args()
