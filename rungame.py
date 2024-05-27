@@ -154,7 +154,11 @@ def reset_for_new_hand():
         for opponent in game.players:
             player.max_win_per_player[opponent] = player.chips
         game.pot[player] = 0
+        if not player.chips and player not in game.eliminated_players:
+            game.eliminated_players.append(player)
     game.dealer = (game.dealer + 1) % len(game.players)
+    while not game.players[game.dealer].active:
+        game.dealer = (game.dealer + 1) % len(game.players)
     game.hands_until_double -= 1
     if game.hands_until_double == 0:
         game.big_blind *= 2
@@ -173,6 +177,17 @@ if __name__ == "__main__":
         run_one_hand(game)
         reset_for_new_hand()
 
+    num_players = int(players)
+    for player in game.eliminated_players:
+        print(num_players, end='')
+        if num_players > 3:
+            print('th: ', end='')
+        elif num_players == 3:
+            print('rd: ', end='')
+        elif num_players == 2:
+            print('nd: ', end='')
+        print(player.ID)
 
-
+    print("Winner:", game.winner().ID + "! Congratulations!")
+    
 

@@ -50,7 +50,8 @@ class Game:
         self.pot = dict()
         for player in self.players:
             self.pot[player] = 0
-        
+
+        self.eliminated_players = list()
         self.community = list()
         self.verbose = verbose
 
