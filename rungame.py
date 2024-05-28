@@ -139,7 +139,7 @@ def run_one_hand(game):
             for player in winner:
                 find_win_amounts(winner, player, game)
         else:
-            find_win_amounts(winner, player, game)
+            find_win_amounts([winner], winner, game)
     time.sleep(5)
 
 def reset_for_new_hand():
