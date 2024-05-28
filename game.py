@@ -88,7 +88,9 @@ class Game:
         if player.chips >= blind:
             player.chips -= blind
             player.current_bet += blind
-        #TODO: what if the player can't cover the blind?
+        else:
+            player.current_bet = player.chips
+            player.chips = 0
 
     def take_blinds(self):
         small_blind_player = self.find_blind(self.dealer + 1)
@@ -369,7 +371,6 @@ class Game:
         for player in self.players:
             if player.active and player.current_bet != max_bet and player.chips != 0:
                 return False
-            #TODO: fix split pots
         return True
 
     def get_hand_winner(self):

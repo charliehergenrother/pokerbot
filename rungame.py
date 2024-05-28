@@ -75,7 +75,6 @@ def run_one_betting_round(game):
             amount_called = min([game.bet_to_call, player.chips + player.current_bet])
             player.chips -= amount_called - player.current_bet
             player.current_bet = amount_called
-            #TODO: going all in & split pots
             player.has_acted = True
         elif (decision.split(" ")[0] in ["raise", "bet"]) and int(decision.split(" ")[1]) > 0:
             amount = int(decision.split(" ")[1])
@@ -95,6 +94,26 @@ def run_one_betting_round(game):
     print('Continuing game! Woohoo!')
     game.complete_phase()
 
+def find_win_amounts(winner, player, game):
+    player_amount_won = 0
+    for opponent in game.players:
+        print("From", opponent.ID + ": ", end='')
+        check_mins = [player.max_win_per_player[opponent]]
+        if game.pot[opponent] >= len(winner):
+            check_mins.append(game.pot[opponent] // len(winner))
+        elif game.pot[opponent] > 0:
+            check_mins.append(1)
+        else:
+            check_mins.append(0)
+        print(check_mins)
+        opponent_amount_won = min(check_mins)
+        player.chips += opponent_amount_won
+        player_amount_won += opponent_amount_won
+        game.pot[opponent] -= opponent_amount_won
+        player.max_win_per_player[opponent] -= opponent_amount_won
+    print("Winner:", player.ID, player_amount_won, "chips")
+
+#TODO: when a player makes a bet that ends up being too big, he needs the difference back
 def run_one_hand(game):
     game.deal()
     game.take_blinds()
@@ -118,31 +137,10 @@ def run_one_hand(game):
                 print("Big ol winner:", winner.ID)
         if type(winner) == list:
             for player in winner:
-                player_amount_won = 0
-                #TODO: extra chips?
-                #TODO: how do I eliminate players from the chip count?
-                for opponent in game.players:
-                    check_mins = [player.max_win_per_player[opponent]]
-                    if game.pot[opponent] >= len(winner):
-                        check_mins.append(game.pot[opponent] // len(winner))
-                    elif game.pot[opponent] > 0:
-                        check_mins.append(1)
-                    else:
-                        check_mins.append(0)
-                    opponent_amount_won = min(check_mins)
-                    player.chips += opponent_amount_won
-                    player_amount_won += opponent_amount_won
-                    game.pot[opponent] -= opponent_amount_won
-                    player.max_win_per_player[opponent] -= opponent_amount_won
-                print("Winner:", player.ID, player_amount_won, "chips")
+                find_win_amounts(winner, player, game)
         else:
-            player_amount_won = 0
-            for opponent in game.players:
-                player_amount_won += game.pot[opponent]
-                game.pot[opponent] = 0
-            print("Winner:", winner.ID, player_amount_won, "chips")
-            winner.chips += player_amount_won
-    time.sleep(10)
+            find_win_amounts(winner, player, game)
+    time.sleep(5)
 
 def reset_for_new_hand():
     game.phase = 0
@@ -157,7 +155,7 @@ def reset_for_new_hand():
         if not player.chips and player not in game.eliminated_players:
             game.eliminated_players.append(player)
     game.dealer = (game.dealer + 1) % len(game.players)
-    while not game.players[game.dealer].active:
+    while not game.players[game.dealer].chips:
         game.dealer = (game.dealer + 1) % len(game.players)
     game.hands_until_double -= 1
     if game.hands_until_double == 0:
